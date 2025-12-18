@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: apex_postgres
+    environment:
+      POSTGRES_USER: apex_user
+      POSTGRES_PASSWORD: secure_password
+      POSTGRES_DB: apex_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - apex_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: apex_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - apex_network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: apex_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://apex_user:secure_password@postgres:5432/apex_db
+      REDIS_URL: redis://redis:6379/0
+      APP_ENV: production
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - apex_network
+    env_file:
+      - .env
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  apex_network:
+    driver: bridge
